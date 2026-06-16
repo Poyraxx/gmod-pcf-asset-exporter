@@ -68,7 +68,7 @@ No external Python packages are required.
 Download or clone this repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/gmod-pcf-asset-exporter.git
+git clone https://github.com/poyraxx/gmod-pcf-asset-exporter.git
 cd gmod-pcf-asset-exporter
 ```
 
