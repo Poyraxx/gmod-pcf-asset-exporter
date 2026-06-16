@@ -44,6 +44,73 @@ VMT_TEXTURE_KEYS = {
     "$basetexture2",
 }
 
+PARTICLE_NAME_EXCLUDE = {
+    "dmx",
+    "pcf",
+    "particles",
+    "particle",
+    "materials",
+    "material",
+    "models",
+    "model",
+    "sound",
+    "sounds",
+    "operator",
+    "renderer",
+    "initializer",
+    "emitter",
+    "control_point",
+    "children",
+    "sequence",
+    "snapshot",
+    "true",
+    "false",
+    "null",
+    "none",
+}
+
+PARTICLE_NAME_BAD_FRAGMENTS = [
+    "cparticle",
+    "dme",
+    "operator",
+    "initializer",
+    "renderer",
+    "emitter",
+    "movement",
+    "random",
+    "radius",
+    "alpha",
+    "color",
+    "colour",
+    "velocity",
+    "sequence",
+    "control",
+    "position",
+    "rotation",
+    "gravity",
+    "noise",
+    "lifespan",
+    "lifetime",
+    "material",
+    "texture",
+    "sprite",
+    "scale",
+    "sort",
+    "max",
+    "min",
+    "time",
+    "fade",
+]
+
+PARTICLE_NAME_BAD_PREFIXES = (
+    "m_",
+    "$",
+    "c_",
+    "op_",
+    "init_",
+    "render_",
+)
+
 
 def pause():
     input("\nÇıkmak için Enter'a bas...")
@@ -107,6 +174,62 @@ def extract_all_strings(path: Path):
 
     return list(strings)
 
+
+
+def is_likely_particle_system_name(value: str) -> bool:
+    """
+    PCF binary içinden çıkan stringin particle system adı olma ihtimalini kontrol eder.
+    Bu kesin bir PCF parser değildir; okunabilir stringler üzerinden güvenli tahmin yapar.
+    """
+    raw = str(value).strip().strip('"').strip("'")
+
+    if not raw:
+        return False
+
+    if "/" in raw or "\\" in raw:
+        return False
+
+    if "." in raw:
+        return False
+
+    if len(raw) < 3 or len(raw) > 96:
+        return False
+
+    if not re.fullmatch(r"[A-Za-z0-9_\-:]+", raw):
+        return False
+
+    low = raw.lower()
+
+    if low in PARTICLE_NAME_EXCLUDE:
+        return False
+
+    if low.startswith(PARTICLE_NAME_BAD_PREFIXES):
+        return False
+
+    if any(fragment in low for fragment in PARTICLE_NAME_BAD_FRAGMENTS):
+        return False
+
+    # Sadece sayıdan oluşan değerler particle system adı değildir.
+    if low.replace("-", "").replace("_", "").isdigit():
+        return False
+
+    return True
+
+
+def extract_particle_system_names_from_pcf(pcf_path: Path):
+    """
+    PCF içindeki particle system adlarını tahmin eder.
+    Manifest'e hem düz liste hem de PrecacheParticleSystem satırı olarak yazılır.
+    """
+    names = set()
+
+    for s in extract_all_strings(pcf_path):
+        candidate = str(s).strip().strip('"').strip("'")
+
+        if is_likely_particle_system_name(candidate):
+            names.add(candidate)
+
+    return sorted(names, key=lambda x: x.lower())
 
 def add_alias(alias_map: dict, alias: str, asset: str):
     alias = norm(alias)
@@ -486,6 +609,7 @@ def copy_asset_to_package(asset: str, roots: dict, package_dir: Path, errors: li
 
 def write_manifest(package_dir: Path, pcf: Path, pcf_root: Path, used: dict, errors: list):
     manifest = package_dir / "manifest.txt"
+    particle_systems = extract_particle_system_names_from_pcf(pcf)
 
     lines = []
     lines.append("PCF Asset Export Manifest")
@@ -493,6 +617,20 @@ def write_manifest(package_dir: Path, pcf: Path, pcf_root: Path, used: dict, err
     lines.append("")
     lines.append(f"PCF: {pcf}")
     lines.append(f"PCF relative: {pcf.relative_to(pcf_root)}")
+    lines.append("")
+
+    lines.append(f"[particle_systems] count={len(particle_systems)}")
+
+    for name in particle_systems:
+        lines.append(name)
+
+    lines.append("")
+
+    lines.append(f"[precache_lua] count={len(particle_systems)}")
+
+    for name in particle_systems:
+        lines.append(f'PrecacheParticleSystem("{name}")')
+
     lines.append("")
 
     for kind in ["materials", "models", "sound"]:
