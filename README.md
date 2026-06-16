@@ -2,131 +2,185 @@
 
 GMod PCF Asset Exporter is a Python tool for organizing Garry's Mod particle assets.
 
-It scans `.pcf` particle files and tries to detect the materials, models, and sounds used by each PCF. Then, it creates a separate export folder for every PCF file and copies the related assets into organized subfolders.
+It scans `.pcf` particle files, extracts readable asset references from PCF binary data, and copies the related materials, models, and sounds into clean output folders.
+
+The tool has two export modes:
+
+1. **Per-PCF Package Mode**: creates a separate folder for each PCF file and writes a `manifest.txt` file.
+2. **Workshop/Add-on Mode**: creates one shared Garry's Mod add-on style folder with `particles`, `materials`, `models`, and `sound` folders.
+
+Original source files are never deleted, moved, or modified. The tool only copies files into the selected output folder.
+
+## Repository Description
+
+A Python tool that exports Garry's Mod PCF particle files with their related materials, models, and sounds, either as separate per-PCF packages or as one Workshop-ready add-on folder.
 
 ## Features
 
-* Scans all `.pcf` files inside a selected folder
-* Extracts readable asset references from PCF binary data
-* Detects related:
+- Scans all `.pcf` files inside a selected folder
+- Extracts readable asset references from PCF binary data
+- Detects related:
+  - Materials
+  - Models
+  - Sounds
+- Supports two export modes
+- Preserves Garry's Mod folder structure
+- Copies VMT texture dependencies such as `.vtf` files
+- Copies model sidecar files such as `.vvd`, `.phy`, `.dx90.vtx`, and `.sw.vtx`
+- Generates `PrecacheParticleSystem("...")` lines in Mode 1 manifests
+- Does not modify or delete original files
+- Requires no external Python packages
 
-  * Materials
-  * Models
-  * Sounds
-* Copies each PCF into its own organized folder
-* Preserves Garry's Mod folder structure
-* Copies VMT texture dependencies such as VTF files
-* Copies model sidecar files such as `.vvd`, `.phy`, `.dx90.vtx`, and `.sw.vtx`
-* Creates a `manifest.txt` file for every exported PCF
-* Does not modify or delete original files
+## Export Modes
 
-## Example Output
+### Mode 1: Per-PCF Package Mode
 
-If you have a PCF file named:
+This mode creates a separate package folder for every PCF file.
 
-```text
-poyraxpcf.pcf
-```
-
-The tool creates an output folder like this:
+Each package contains:
 
 ```text
-exported/
-└── poyraxpcf/
-    ├── particles/
-    │   └── poyraxpcf.pcf
-    ├── materials/
-    │   └── ...
-    ├── models/
-    │   └── ...
-    ├── sound/
-    │   └── ...
-    └── manifest.txt
+pcf_name/
+├── particles/
+├── materials/
+├── models/
+├── sound/
+└── manifest.txt
 ```
 
-## Use Case
+The `manifest.txt` file includes:
 
-This tool is useful when you have a large Garry's Mod addon or particle pack with mixed files and you want to separate each PCF with only the assets it uses.
+- The PCF path
+- Detected particle system names
+- Ready-to-copy `PrecacheParticleSystem("...")` Lua lines
+- Used materials
+- Used models
+- Used sounds
+- Copy warnings or errors, if any
 
-It can help with:
+Example manifest section:
 
-* Cleaning large addon folders
-* Organizing particle effects
-* Preparing assets for release
-* Finding dependencies of PCF files
-* Creating smaller PCF-specific packages
+```text
+[particle_systems] count=4
+hpw_apparation_black
+hpw_apparation_black_impact
+hpw_apparation_white
+hpw_apparation_white_impact
+
+[precache_lua] count=4
+PrecacheParticleSystem("hpw_apparation_black")
+PrecacheParticleSystem("hpw_apparation_black_impact")
+PrecacheParticleSystem("hpw_apparation_white")
+PrecacheParticleSystem("hpw_apparation_white_impact")
+```
+
+### Mode 2: Workshop/Add-on Mode
+
+This mode collects all PCF files and all used assets into one shared folder.
+
+It is designed for creating a clean Workshop/add-on upload structure.
+
+Output example:
+
+```text
+output/
+├── particles/
+│   ├── effect_1.pcf
+│   └── effect_2.pcf
+├── materials/
+│   └── ...
+├── models/
+│   └── ...
+└── sound/
+    └── ...
+```
+
+This mode does **not** create `manifest.txt` files.
+
+Use this mode when you want all PCF files and their shared dependencies inside one add-on folder.
 
 ## Requirements
 
-* Python 3.10 or newer
-* Windows, Linux, or macOS
+- Python 3.10 or newer
+- Windows, Linux, or macOS
 
 No external Python packages are required.
 
-## How to Use
+## Installation
 
-Download or clone this repository:
+Clone the repository:
 
 ```bash
 git clone https://github.com/poyraxx/gmod-pcf-asset-exporter.git
 cd gmod-pcf-asset-exporter
 ```
 
+Or download the script manually and place it inside any folder you want.
+
+## Usage
+
 Run the script:
 
 ```bash
-python pcf_asset_exporter.py
+python pcf_asset_exporter_dual_mode_en.py
 ```
 
-The tool will ask for the following folders:
+The tool will ask you to choose an export mode:
 
 ```text
-PCF folder path:
-Materials folder path:
-Models folder path:
-Sound folder path:
+1 - Separate folder per PCF + manifest.txt + PrecacheParticleSystem list
+2 - Workshop/addon mode: one folder, shared particles/materials/models/sound, no manifest
+```
+
+Then it will ask for source folders:
+
+```text
+Enter the PCF folder path:
+Enter the materials folder path, or leave empty:
+Enter the models folder path, or leave empty:
+Enter the sound folder path, or leave empty:
 Output folder:
 ```
 
 Example:
 
 ```text
-PCF folder path:
+Enter the PCF folder path:
 D:\gmod_temp\particles
 
-Materials folder path:
+Enter the materials folder path, or leave empty:
 D:\gmod_temp\materials
 
-Models folder path:
+Enter the models folder path, or leave empty:
 D:\gmod_temp\models
 
-Sound folder path:
+Enter the sound folder path, or leave empty:
 D:\gmod_temp\sound
 
 Output folder:
 D:\gmod_temp\exported
 ```
 
-After the scan is completed, each PCF file will have its own exported folder.
-
 ## Windows Batch Launcher
 
-You can also create a `run.bat` file:
+A simple `.bat` launcher can be used on Windows:
 
 ```bat
 @echo off
 title GMod PCF Asset Exporter
-python pcf_asset_exporter.py
+python pcf_asset_exporter_dual_mode_en.py
 pause
 ```
 
-Then double-click `run.bat` to start the tool.
+Double-click the `.bat` file to run the exporter in a terminal window.
 
 ## How It Works
 
-The tool reads PCF files as binary data and extracts readable strings from them. These strings are compared against the files inside your `materials`, `models`, and `sound` folders.
+PCF files are binary files. This tool does not fully decode or compile PCF data.
 
-For example, if a PCF contains a reference like:
+Instead, it extracts readable ASCII and UTF-16 strings from PCF files and compares those strings against indexed files inside your selected `materials`, `models`, and `sound` folders.
+
+For example, if a PCF contains this readable reference:
 
 ```text
 effects/fire_smoke
@@ -138,13 +192,14 @@ and your materials folder contains:
 materials/effects/fire_smoke.vmt
 ```
 
-the tool will detect it as a used material and copy it into the PCF export folder.
+the tool can detect that material and copy it into the output folder.
 
-The tool also reads `.vmt` files to find related `.vtf` texture files.
+The tool also reads `.vmt` files and attempts to copy related `.vtf` texture files.
 
-For models, if a `.mdl` file is detected, the tool also tries to copy related files such as:
+For models, if a `.mdl` file is detected, the tool also tries to copy related sidecar files:
 
 ```text
+.mdl
 .vvd
 .phy
 .dx80.vtx
@@ -155,56 +210,33 @@ For models, if a `.mdl` file is detected, the tool also tries to copy related fi
 
 ## Limitations
 
-PCF files are binary files, so this tool works by extracting readable strings from them. Because of that, detection may not be perfect in every case.
+PCF files are binary files, so detection is based on readable strings and heuristics. It may not be perfect for every PCF file.
 
-Some sound references may use sound script names instead of direct file paths. For example:
+Some sounds may be referenced through Source Engine sound script names instead of direct file paths. For example:
 
 ```text
 Weapon_AR2.Single
 ```
 
-In that case, the tool may not be able to resolve the exact `.wav`, `.mp3`, or `.ogg` file unless the real file path is present in the PCF data.
+If the real `.wav`, `.mp3`, or `.ogg` path is not present in the PCF data, the tool may not be able to resolve it automatically.
 
-Always check the generated `manifest.txt` files after exporting.
+Particle system names are also detected heuristically from readable strings. The generated `PrecacheParticleSystem("...")` lines should be reviewed before use.
 
 ## Safety
 
-This tool only copies files into the output folder. It does not delete, move, or modify the original addon files.
+This tool only copies files. It does not delete, move, or edit your original files.
 
-## Recommended Folder Structure
+Still, it is recommended to review the output before publishing or uploading it to the Steam Workshop.
 
-Your source folder can look like this:
-
-```text
-source/
-├── particles/
-├── materials/
-├── models/
-└── sound/
-```
-
-The exported folder will look like this:
+## Suggested Repository Name
 
 ```text
-exported/
-├── particle_file_1/
-│   ├── particles/
-│   ├── materials/
-│   ├── models/
-│   ├── sound/
-│   └── manifest.txt
-│
-└── particle_file_2/
-    ├── particles/
-    ├── materials/
-    ├── models/
-    ├── sound/
-    └── manifest.txt
+gmod-pcf-asset-exporter
 ```
 
 ## License
 
-This project is open-source and can be used, modified, and distributed freely.
+This project is open-source. You may use, modify, and distribute it freely.
 
 ## Disclaimer
 
